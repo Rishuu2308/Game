@@ -38,17 +38,19 @@ from typing import List, Dict
 class Player:
     def __init__(self, name: str):
         self.name = name
-        self.score = 0
+        self.lives = 3
 
-    def take_turn(self) -> int:
-        # Placeholder for turn logic
-        return random.randint(1, 6)
+    def take_turn(self, last_letter: str) -> str:
+        # In a real implementation, this would get input from the player
+        word = input(f"{self.name}, enter a word starting with '{last_letter}': ")
+        return word
 
 class Game:
     def __init__(self, max_players: int = 10):
         self.players: List[Player] = []
         self.max_players = max_players
-        self.current_player_index = 0
+        self.current_word = ""
+        self.used_words = set()
 
     def add_player(self, name: str) -> bool:
         if len(self.players) < self.max_players:
@@ -61,42 +63,54 @@ class Game:
             print("Not enough players to start the game.")
             return
 
-        print("Game started!")
+        print("Word Chain Game started!")
+        self.current_word = random.choice(["apple", "elephant", "umbrella", "xylophone"])
+        print(f"The starting word is: {self.current_word}")
+        self.used_words.add(self.current_word)
+
         while not self.is_game_over():
             self.play_round()
 
         self.end_game()
 
     def play_round(self):
-        current_player = self.players[self.current_player_index]
-        print(f"{current_player.name}'s turn:")
-        result = current_player.take_turn()
-        print(f"{current_player.name} rolled a {result}")
-        
-        # Placeholder for score update logic
-        current_player.score += result
-
-        self.current_player_index = (self.current_player_index + 1) % len(self.players)
+        for player in self.players:
+            if player.lives > 0:
+                last_letter = self.current_word[-1]
+                new_word = player.take_turn(last_letter)
+                
+                if (new_word.lower()[0] != last_letter.lower() or 
+                    new_word.lower() in self.used_words):
+                    print(f"Invalid word! {player.name} loses a life.")
+                    player.lives -= 1
+                else:
+                    self.current_word = new_word
+                    self.used_words.add(new_word.lower())
+                    print(f"Valid word! The new word is: {self.current_word}")
 
     def is_game_over(self) -> bool:
-        # Placeholder for game over condition
-        return any(player.score >= 50 for player in self.players)
+        active_players = sum(1 for player in self.players if player.lives > 0)
+        return active_players <= 1
 
     def end_game(self):
         print("Game Over!")
         for player in self.players:
-            print(f"{player.name}: {player.score} points")
-        winner = max(self.players, key=lambda p: p.score)
-        print(f"The winner is {winner.name} with {winner.score} points!")
+            print(f"{player.name}: {player.lives} lives remaining")
+        winner = next((player for player in self.players if player.lives > 0), None)
+        if winner:
+            print(f"The winner is {winner.name}!")
+        else:
+            print("It's a tie!")
 
 def main():
     game = Game()
     
     # Add players
-    for i in range(1, 11):
-        if not game.add_player(f"Player {i}"):
-            break
-
+    num_players = int(input("Enter the number of players (2-10): "))
+    for i in range(num_players):
+        name = input(f"Enter name for Player {i+1}: ")
+        game.add_player(name)
+    
     game.start_game()
 
 if __name__ == "__main__":
